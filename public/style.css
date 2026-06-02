@@ -1,0 +1,120 @@
+/**
+ * style.css
+ * Design personalizzato mobile-native per l'app Gestione Spese Parcheggi.
+ * Riproduce un'estetica fluida stile Material You / iOS, con curve morbide e ombreggiature raffinate.
+ */
+
+/* ==================== PERSONALIZZAZIONE CARATTERI & ICONE ==================== */
+.material-symbols-rounded {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  transition: font-variation-settings 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+/* Riempimento per le icone dei tab attivi */
+.active .material-symbols-rounded, 
+.nav-item.active .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ==================== TRANSIZIONI TAB ==================== */
+.tab-pane {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.tab-pane.hidden {
+  display: none !important;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+/* ==================== BOTTOM SHEET & DIALOGS ANIMATIONS ==================== */
+/* Sfondo modali */
+.backdrop-active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Animazione Bottom Sheet */
+.sheet-active {
+  transform: translateY(0) !important;
+}
+
+/* Animazione Dialog Dettagli (Zoom sfumato) */
+.modal-active {
+  transform: scale(1) !important;
+  opacity: 1 !important;
+}
+
+/* ==================== ELEMENTI CUSTOM STYLING ==================== */
+/* Area drop scontrini drag-over */
+#dropZone.dragover {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  transform: scale(0.98);
+}
+
+/* Bottone Radio Personalizzato */
+input[type="radio"]:checked + span {
+  font-weight: 700;
+  color: #1e40af;
+}
+
+input[type="radio"]:checked {
+  border-color: #2563eb;
+}
+
+label:has(input[type="radio"]:checked) {
+  border-color: #3b82f6 !important;
+  background-color: #f0f6ff !important;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -2px rgba(59, 130, 246, 0.1);
+}
+
+/* Scrollbar personalizzata e invisibile per una sensazione nativa */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 99px;
+}
+
+/* Supporto per scontrini lunghi in scommesse e liste */
+.expense-card-shadow {
+  box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.04);
+}
+
+/* Stili specifici per l'esportazione e anteprima PDF */
+#pdfRenderCanvas {
+  max-width: 100%;
+}
+
+/* Overlay animato durante l'elaborazione */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner-icon {
+  animation: spin-slow 2s linear infinite;
+}
+
+/* Sicurezza per dispositivi iOS con asola a goccia o gesture-bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  main {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom)) !important;
+  }
+  footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom)) !important;
+  }
+  #formSheet {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+}

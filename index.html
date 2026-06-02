@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Spese Parcheggio" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <meta name="theme-color" content="#f8fafc" />
+
+    <title>Gestione Spese Parcheggi</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Google Fonts & Material Symbols Rounded -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- Tailwind CSS CDN per compilazione classi on-the-fly -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              outfit: ['Outfit', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- CDNs per librerie esterne (Tesseract, PDF.js, jsPDF) -->
+    <script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Asset Locali -->
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/db.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body class="bg-slate-50 text-slate-800 antialiased font-sans flex flex-col min-h-screen">
+
+    <!-- Container Centrale per il Layout Mobile (Max 430px, centrato su Desktop) -->
+    <main class="w-full max-w-[430px] mx-auto bg-slate-50 min-h-screen shadow-2xl flex flex-col pb-28 relative border-x border-slate-100/50">
+      
+      <!-- HEADER PRINCIPALE -->
+      <header class="sticky top-0 z-30 bg-slate-50/85 backdrop-blur-md px-6 pt-6 pb-4 border-b border-slate-100 flex justify-between items-center">
+        <div>
+          <h1 class="text-xs font-semibold text-slate-400 tracking-wider uppercase font-sans">Parcheggi Spese</h1>
+          <h2 class="text-2xl font-bold tracking-tight text-slate-900 font-display font-outfit">SostaFacile</h2>
+        </div>
+        <div id="connectionStatus" class="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 border border-emerald-100">
+          <span class="material-symbols-rounded text-sm">wifi</span>
+          <span>Online</span>
+        </div>
+      </header>
+
+      <!-- SEZIONE CONTENUTO MULTI-TAB -->
+      <section id="contentContainer" class="flex-grow px-5 py-4 overflow-y-auto">
+        
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <div id="tabDashboard" class="tab-pane active space-y-6">
+          
+          <!-- Filtro del Mese e Anno -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100/80 flex items-center justify-between">
+            <button id="prevMonthBtn" class="w-10 h-10 rounded-full hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer text-slate-600">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            <div class="text-center">
+              <span id="currentMonthDisplay" class="text-lg font-semibold font-outfit text-slate-800 capitalize">Mese Corrente</span>
+              <div id="currentYearDisplay" class="text-xs text-slate-400 font-mono">2026</div>
+            </div>
+            <button id="nextMonthBtn" class="w-10 h-10 rounded-full hover:bg-slate-50 flex items-center justify-center transition-all cursor-pointer text-slate-600">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+          </div>
+
+          <!-- Totale Cart ed Esportazione -->
+          <div class="bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-[32px] p-6 text-white shadow-xl shadow-blue-500/10 relative overflow-hidden">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+            <div class="absolute -left-8 -bottom-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-indigo-100/80 text-sm font-medium">Spese del Mese</p>
+                <h3 id="monthlyTotalDisplay" class="text-4xl font-extrabold mt-1 tracking-tight font-outfit">€ 0,00</h3>
+              </div>
+              <div id="activeMonthStats" class="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-2xl text-xs font-semibold">
+                <span id="monthlyCountDisplay">0 soste</span>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-white/10 flex justify-between items-center">
+              <div class="flex gap-4">
+                <div>
+                  <span class="text-xs text-indigo-200 block">Cartaceo</span>
+                  <span id="countCartaceo" class="font-semibold text-sm">0</span>
+                </div>
+                <div class="border-l border-white/15 pl-4">
+                  <span class="text-xs text-indigo-200 block">Digitale</span>
+                  <span id="countDigitale" class="font-semibold text-sm">0</span>
+                </div>
+              </div>
+              
+              <button id="exportPdfBtn" class="bg-white text-blue-700 hover:bg-slate-100 px-4 py-2.5 rounded-2xl text-xs font-bold shadow-md shadow-slate-900/10 flex items-center gap-1.5 transition-all cursor-pointer">
+                <span class="material-symbols-rounded text-base">picture_as_pdf</span>
+                Esporta PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Lista Spese del Mese Selezionato -->
+          <div class="space-y-4">
+            <div class="flex justify-between items-center px-1">
+              <h4 class="font-bold text-slate-800 font-outfit text-base">Scontrini e Soste</h4>
+              <span class="text-xs text-slate-400 font-mono" id="monthListingLabel">Giugno 2026</span>
+            </div>
+
+            <!-- Lista Dinamica Spese -->
+            <div id="monthlyExpensesList" class="space-y-3 min-h-[150px]">
+              <!-- Inserite dinamicamente da JS, o messaggio Empty State -->
+              <div class="bg-white rounded-3xl p-8 text-center border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400">
+                <span class="material-symbols-rounded text-4xl text-slate-300 mb-2">receipt_long</span>
+                <p class="text-sm font-medium">Nessuna spesa salvata per questo mese.</p>
+                <p class="text-xs mt-1">Carica uno scontrino o inseriscila manualmente!</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ==================== TAB 2: STORICO ==================== -->
+        <div id="tabStorico" class="tab-pane hidden space-y-5">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-slate-800 font-outfit text-xl">Storico Completo</h4>
+            <span id="historyTotalCount" class="bg-slate-100 text-slate-600 text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-200 font-mono">0 spese</span>
+          </div>
+
+          <!-- Filtri e Ricerca -->
+          <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-3">
+            <div class="flex gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+              <button id="filterAllBtn" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white shadow-sm text-blue-600 transition-all cursor-pointer">Tutti</button>
+              <button id="filterCartaceoBtn" class="flex-1 py-2 text-xs font-medium rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 transition-all cursor-pointer">Cartaceo</button>
+              <button id="filterDigitaleBtn" class="flex-1 py-2 text-xs font-medium rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 transition-all cursor-pointer">Digitale</button>
+            </div>
+
+            <div class="relative">
+              <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+              <input type="text" id="searchInput" placeholder="Cerca tra note..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-all" />
+            </div>
+          </div>
+
+          <!-- Lista Dinamica Storico -->
+          <div id="historyExpensesList" class="space-y-3">
+            <!-- Inserite dinamicamente -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==================== DIALOG DETTAGLIO / ANTEPRIMA SCONTRINO ==================== -->
+      <div id="detailBackdrop" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all opacity-0 pointer-events-none duration-300">
+        <div id="detailModal" class="bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl transform scale-95 transition-all duration-300 flex flex-col max-h-[85vh]">
+          
+          <div class="p-6 pb-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <h5 class="font-extrabold text-slate-900 font-outfit text-lg">Dettaglio Spesa</h5>
+            <button id="closeDetailModalBtn" class="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer">
+              <span class="material-symbols-rounded text-lg">close</span>
+            </button>
+          </div>
+
+          <div class="overflow-y-auto p-6 space-y-4 flex-grow">
+            <!-- Immagine scontrino dello scontrino -->
+            <div id="detailImageContainer" class="relative rounded-2xl overflow-hidden bg-slate-100 aspect-[4/5] border border-slate-200">
+              <img id="detailImage" class="w-full h-full object-contain" referrerPolicy="no-referrer" alt="Scontrino" />
+              <div id="detailNoImage" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                <span class="material-symbols-rounded text-4xl mb-1">image_not_supported</span>
+                <span class="text-xs">Nessuna foto allegata</span>
+              </div>
+            </div>
+
+            <!-- Dettagli testuali -->
+            <div class="space-y-3 pt-2">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Importo</span>
+                  <span id="detailAmount" class="text-lg font-extrabold text-slate-900 font-outfit">€ 0,00</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Tipo Spesa</span>
+                  <span id="detailType" class="text-sm font-semibold text-slate-700">Cartaceo</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center col-span-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Data</span>
+                  <span id="detailDate" class="text-xs font-medium text-slate-700 font-mono">01-01-2026</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center col-span-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Inizio</span>
+                  <span id="detailStartTime" class="text-xs font-semibold text-slate-700 font-mono">08:00</span>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-center col-span-1">
+                  <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Fine</span>
+                  <span id="detailEndTime" class="text-xs font-semibold text-slate-700 font-mono">10:00</span>
+                </div>
+              </div>
+
+              <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Note</span>
+                <p id="detailNote" class="text-sm text-slate-600 leading-relaxed font-sans italic">Nessuna nota aggiuntiva</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pulsantiera Delete/Edit -->
+          <div class="p-6 pt-4 border-t border-slate-100 flex gap-3 bg-slate-50/50 relative z-10">
+            <button id="deleteExpenseBtn" class="flex-1 bg-rose-50 text-rose-600 hover:bg-rose-100 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-rose-100 relative z-10">
+              <span class="material-symbols-rounded text-lg">delete</span>
+              Elimina
+            </button>
+            <button id="editExpenseBtn" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-500/10 relative z-10">
+              <span class="material-symbols-rounded text-lg">edit_note</span>
+              Modifica
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ==================== BOTTOM SHEET MODALE (INSERIMENTO / EDIT) ==================== -->
+      <div id="formBackdrop" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 flex items-end justify-center transition-all opacity-0 pointer-events-none duration-300">
+        
+        <!-- Bottom Sheet, slitta in alto da mobile, centramento su desktop -->
+        <div id="formSheet" class="bg-white w-full max-w-[430px] rounded-t-[36px] overflow-hidden shadow-2xl transform translate-y-full transition-all duration-300 flex flex-col max-h-[92vh]">
+          
+          <!-- Header Bottom Sheet in gomma/soft drag -->
+          <div class="w-full flex flex-col items-center py-3 border-b border-slate-100 sticky top-0 bg-white z-50">
+            <div class="w-12 h-1.5 bg-slate-200 rounded-full mb-3"></div>
+            <h3 id="formTitle" class="font-extrabold text-slate-900 font-outfit text-xl">Aggiungi Spesa</h3>
+          </div>
+
+          <div class="overflow-y-auto px-6 py-4 space-y-5 flex-grow pb-12">
+            
+            <!-- SEZIONE UPLOAD BIGLIETTO / SCONTRINO (Drag-and-Drop) -->
+            <div id="uploadContainer" class="space-y-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Scansiona Scontrino (OCR)</span>
+              
+              <div id="dropZone" class="border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/10 rounded-3xl p-6 transition-all text-center flex flex-col items-center justify-center relative group">
+                <input type="file" id="fileFileInput" accept=".jpg,.jpeg,.png,.pdf" class="hidden" />
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+                
+                <div id="uploadPrompt" class="space-y-4 w-full">
+                  <div class="flex gap-3 justify-center">
+                    <button type="button" onclick="document.getElementById('cameraInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
+                      <span class="material-symbols-rounded text-3xl text-blue-600">photo_camera</span>
+                      <span class="text-xs font-bold text-slate-700">Scatta Foto</span>
+                    </button>
+                    <button type="button" onclick="document.getElementById('fileFileInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
+                      <span class="material-symbols-rounded text-3xl text-blue-600">folder_open</span>
+                      <span class="text-xs font-bold text-slate-700">Sfoglia File</span>
+                    </button>
+                  </div>
+                  <p class="text-[10px] text-slate-400">Accetta JPG, PNG, PDF per OCR automatico</p>
+                </div>
+
+                <!-- Preview dell'immagine caricata -->
+                <div id="uploadPreview" class="hidden absolute inset-2 bg-white rounded-2xl overflow-hidden border border-slate-200 z-10">
+                  <img id="formImagePreview" class="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Anteprima scontrino" />
+                  <button type="button" id="removeImgBtn" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-slate-900/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-slate-900 transition-all cursor-pointer">
+                    <span class="material-symbols-rounded text-lg">close</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loader OCR -->
+              <div id="ocrLoader" class="hidden bg-blue-50/50 border border-blue-100 rounded-2xl p-4 text-center space-y-2">
+                <div class="flex items-center justify-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.1s"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style="animation-delay: 0.2s"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce" style="animation-delay: 0.3s"></span>
+                </div>
+                <p id="ocrStatusMsg" class="text-xs font-semibold text-blue-800">Tesseract.js sta analizzando lo scontrino...</p>
+                <div class="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
+                  <div id="ocrProgressBar" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- FORM DI INSERIMENTO CAMPI -->
+            <form id="expenseForm" class="space-y-4" onsubmit="return false;">
+              <!-- Campo hidden per ID (se in modifica) -->
+              <input type="hidden" id="expenseId" />
+              <!-- Campo hidden per immagine base64 / blob -->
+              <input type="hidden" id="expenseImageBase64" />
+
+              <!-- Importo monetario (amount) -->
+              <div>
+                <label for="amountInput" class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Importo (€) *</label>
+                <div class="relative">
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 font-extrabold text-lg text-slate-400">€</span>
+                  <input type="number" id="amountInput" placeholder="0,00" step="0.01" min="0" required class="w-full pl-9 pr-4 py-3 bg-slate-100/50 border border-transparent rounded-2xl text-xl font-bold tracking-tight text-slate-900 focus:outline-none focus:bg-white focus:border-blue-400 transition-all" />
+                </div>
+              </div>
+
+              <!-- Tipo Spesa (Cartaceo / Digitale) -->
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Formato Ricevuta *</span>
+                <div class="flex gap-4">
+                  <label class="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all font-medium text-sm text-slate-700 bg-white" id="radioCartaceoLabel">
+                    <input type="radio" name="expenseType" id="typeCartaceo" value="Cartaceo" checked class="accent-blue-600" />
+                    <span>Cartaceo</span>
+                  </label>
+                  <label class="flex-1 flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all font-medium text-sm text-slate-700 bg-white" id="radioDigitaleLabel">
+                    <input type="radio" name="expenseType" id="typeDigitale" value="Digitale" class="accent-blue-600" />
+                    <span>Digitale</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Data sosta -->
+              <div>
+                <label for="dateInput" class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Data Sosta *</label>
+                <input type="date" id="dateInput" required class="w-full px-4 py-3 bg-slate-100/50 border border-transparent rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-400 transition-all font-mono" />
+              </div>
+
+              <!-- Orari (Inizio e Fine) -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="startTimeInput" class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Ora Inizio</label>
+                  <input type="time" id="startTimeInput" class="w-full px-4 py-3 bg-slate-100/50 border border-transparent rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-400 transition-all font-mono" />
+                </div>
+                <div>
+                  <label for="endTimeInput" class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Ora Fine</label>
+                  <input type="time" id="endTimeInput" class="w-full px-4 py-3 bg-slate-100/50 border border-transparent rounded-2xl text-sm font-semibold text-slate-800 focus:outline-none focus:bg-white focus:border-blue-400 transition-all font-mono" />
+                </div>
+              </div>
+
+              <!-- Note -->
+              <div>
+                <label for="noteInput" class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">Note</label>
+                <textarea id="noteInput" rows="2" placeholder="Es. Parcheggio Multipiano Centro, Area B..." class="w-full px-4 py-3 bg-slate-100/50 border border-transparent rounded-2xl text-sm text-slate-800 focus:outline-none focus:bg-white focus:border-blue-400 transition-all"></textarea>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- Pulsanti Salva / Annulla fissi a fondo modale -->
+          <div class="p-6 border-t border-slate-100 flex gap-3 bg-white sticky bottom-0">
+            <button id="cancelFormBtn" class="flex-1 bg-slate-50 text-slate-600 hover:bg-slate-100 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer border border-slate-100">
+              Annulla
+            </button>
+            <button id="saveExpenseBtn" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-3.5 rounded-2xl font-bold text-sm transition-all cursor-pointer shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5">
+              <span class="material-symbols-rounded text-lg">save</span>
+              Salva Spesa
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Canvas invisibile per renderizzare i PDF con PDF.js -->
+      <canvas id="pdfRenderCanvas" class="hidden"></canvas>
+
+      <!-- BARRA DI NAVIGAZIONE COMPONENT (FIXED BOTTOM BAR) -->
+      <footer class="absolute bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur-md border-t border-slate-150 px-8 py-3 pb-8 flex justify-between items-center rounded-t-3xl shadow-lg shadow-slate-900/5">
+        
+        <!-- Tab 1 Dashboard -->
+        <button id="navDashboardBtn" class="nav-item flex flex-col items-center gap-1 active text-blue-600 font-bold transition-all cursor-pointer flex-1 py-1">
+          <span class="material-symbols-rounded text-2xl fill-active">bar_chart</span>
+          <span class="text-[10px] tracking-wide">Dashboard</span>
+        </button>
+
+        <!-- Prominent FAB Centrato per "Aggiungi" con asola visiva -->
+        <div class="relative -top-7 px-4">
+          <button id="openFormBtn" class="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border-4 border-slate-50">
+            <span class="material-symbols-rounded text-3xl">add</span>
+          </button>
+        </div>
+
+        <!-- Tab 2 Storico -->
+        <button id="navStoricoBtn" class="nav-item flex flex-col items-center gap-1 text-slate-400 font-medium transition-all cursor-pointer flex-1 py-1">
+          <span class="material-symbols-rounded text-2xl">history</span>
+          <span class="text-[10px] tracking-wide">Storico</span>
+        </button>
+
+      </footer>
+
+    </main>
+
+  </body>
+</html>

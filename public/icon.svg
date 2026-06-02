@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#356bf1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#grad)" />
+  <!-- Car silhouette in the middle-bottom -->
+  <path d="M140 230 L372 230 C392 230 408 246 408 266 L408 340 H104 L104 266 C104 246 120 230 140 230 Z" fill="#ffffff" />
+  <path d="M160 230 L190 150 H322 L352 230 Z" fill="#f1f5f9" />
+  <circle cx="160" cy="295" r="22" fill="#1e40af" />
+  <circle cx="352" cy="295" r="22" fill="#1e40af" />
+  <!-- Parking badge at the top -->
+  <circle cx="256" cy="115" r="55" fill="#f59e0b" stroke="#ffffff" stroke-width="6" />
+  <text x="256" y="136" font-family="'Inter', 'Salesforce Sans', system-ui, sans-serif" font-weight="900" font-size="62" fill="#ffffff" text-anchor="middle">P</text>
+</svg>

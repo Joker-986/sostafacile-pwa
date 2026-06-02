@@ -1,0 +1,18 @@
+{
+  "short_name": "Spese Parcheggio",
+  "name": "Gestione Spese Parcheggi",
+  "description": "Applicazione per il tracciamento delle spese dei parcheggi con supporto offline e OCR degli scontrini.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait"
+}
