@@ -134,17 +134,9 @@ function registerServiceWorker() {
 
 function updateOnlineStatus() {
   if (navigator.onLine) {
-    DOM.connectionStatus.innerHTML = `
-      <span class="material-symbols-rounded text-sm">wifi</span>
-      <span>Online</span>
-    `;
-    DOM.connectionStatus.className = 'flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 border border-emerald-100';
+    DOM.connectionStatus.classList.add('hidden');
   } else {
-    DOM.connectionStatus.innerHTML = `
-      <span class="material-symbols-rounded text-sm">wifi_off</span>
-      <span>Offline</span>
-    `;
-    DOM.connectionStatus.className = 'flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 border border-amber-100';
+    DOM.connectionStatus.classList.remove('hidden');
   }
 }
 

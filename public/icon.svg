@@ -1,17 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#356bf1;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    <!-- Background Gradient: Indigo to Royal Blue -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e3a8a;stop-opacity:1" />
     </linearGradient>
+    
+    <!-- Ticket/Receipt Gradient: Soft White to Silver -->
+    <linearGradient id="ticketGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop Shadow for the ticket -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#0f172a" flood-opacity="0.3" />
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="128" fill="url(#grad)" />
-  <!-- Car silhouette in the middle-bottom -->
-  <path d="M140 230 L372 230 C392 230 408 246 408 266 L408 340 H104 L104 266 C104 246 120 230 140 230 Z" fill="#ffffff" />
-  <path d="M160 230 L190 150 H322 L352 230 Z" fill="#f1f5f9" />
-  <circle cx="160" cy="295" r="22" fill="#1e40af" />
-  <circle cx="352" cy="295" r="22" fill="#1e40af" />
-  <!-- Parking badge at the top -->
-  <circle cx="256" cy="115" r="55" fill="#f59e0b" stroke="#ffffff" stroke-width="6" />
-  <text x="256" y="136" font-family="'Inter', 'Salesforce Sans', system-ui, sans-serif" font-weight="900" font-size="62" fill="#ffffff" text-anchor="middle">P</text>
+
+  <!-- Base Rounded Background App Icon -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- The Ticket / Parking Note Concept Container with Shadow -->
+  <rect x="128" y="112" width="256" height="300" rx="24" fill="url(#ticketGrad)" filter="url(#shadow)" />
+
+  <!-- ticket "cutout" notch details on the left and right (classic tickets) -->
+  <circle cx="128" cy="262" r="16" fill="url(#bgGrad)" />
+  <circle cx="384" cy="262" r="16" fill="url(#bgGrad)" />
+
+  <!-- Top bar color stripe on the ticket (Indigo accent) -->
+  <path d="M 128,136 A 24,24 0 0,1 152,112 L 360,112 A 24,24 0 0,1 384,136 L 384,160 L 128,160 Z" fill="#2563eb" />
+
+  <!-- Parking Letter 'P' inside the white space -->
+  <path d="M 196,192 H 256 C 290,192 312,208 312,238 C 312,268 290,284 256,284 H 224 V 352 H 196 Z M 224,220 V 256 H 254 C 272,256 284,248 284,238 C 284,228 272,220 254,220 Z" fill="#1e3a8a" />
+
+  <!-- Elegant minimalist docket details representing receipt/notes rows -->
+  <!-- Line 1: date placeholder -->
+  <rect x="196" y="306" width="120" height="8" rx="4" fill="#cbd5e1" />
+  
+  <!-- Line 2: monetary/amount placeholder -->
+  <rect x="196" y="322" width="80" height="8" rx="4" fill="#94a3b8" />
+
+  <!-- Small star logo mark in the accent bar -->
+  <polygon points="256,124 259,131 267,132 261,137 263,145 256,141 249,145 251,137 245,132 253,131" fill="#ffffff" opacity="0.9" />
 </svg>
