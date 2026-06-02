@@ -47,6 +47,16 @@ self.addEventListener('activate', (event) => {
 
 // Intercettazione delle richieste fetch per supportare il funzionamento offline
 self.addEventListener('fetch', (event) => {
+  // Ignora le richieste non HTTP/HTTPS (es. chrome-extension://)
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
+  // Ignora le chiamate API di Gemini (non metterle in cache)
+  if (event.request.url.includes('generativelanguage.googleapis.com')) {
+    return;
+  }
+
   // Gestiamo solo le richieste GET
   if (event.request.method !== 'GET') {
     return;

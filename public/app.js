@@ -570,6 +570,10 @@ function initUploadEvents() {
 }
 
 async function processSelectedFile(file, isAlreadyCropped = false) {
+  console.log("Stato online:", navigator.onLine);
+  console.log("window.GEMINI_API_KEY:", window.GEMINI_API_KEY);
+  console.log("GEMINI_API_KEY locale:", GEMINI_API_KEY);
+
   if (!isAlreadyCropped) {
     try {
       let imageSrc = '';
