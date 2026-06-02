@@ -11,6 +11,9 @@ const MONTH_NAMES_IT = [
 ];
 
 // Stato dell'applicazione
+const GEMINI_API_KEY = window.GEMINI_API_KEY || "";
+let cropperInstance = null;
+
 const AppState = {
   currentDate: new Date("2026-06-02"), // Tempo corrente ancorato al valore di sistema fornito
   activeTab: 'dashboard',              // Tab attivo: 'dashboard' o 'storico'
@@ -82,6 +85,7 @@ const DOM = {
   uploadPreview: document.getElementById('uploadPreview'),
   formImagePreview: document.getElementById('formImagePreview'),
   removeImgBtn: document.getElementById('removeImgBtn'),
+  cropAndAnalyzeBtn: document.getElementById('cropAndAnalyzeBtn'),
   ocrLoader: document.getElementById('ocrLoader'),
   ocrStatusMsg: document.getElementById('ocrStatusMsg'),
   ocrProgressBar: document.getElementById('ocrProgressBar'),
@@ -401,11 +405,20 @@ function openExpenseForm(expense = null) {
   DOM.expenseId.value = '';
   DOM.expenseImageBase64.value = '';
   
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
+  
   DOM.uploadPreview.classList.add('hidden');
+  DOM.dropZone.classList.remove('hidden');
   DOM.formImagePreview.src = '';
   DOM.ocrLoader.classList.add('hidden');
   DOM.ocrProgressBar.style.width = '0%';
   DOM.uploadPrompt.classList.remove('hidden');
+  if (DOM.cropAndAnalyzeBtn) {
+    DOM.cropAndAnalyzeBtn.classList.add('hidden');
+  }
 
   if (expense) {
     AppState.isEditing = true;
@@ -424,6 +437,7 @@ function openExpenseForm(expense = null) {
       DOM.expenseImageBase64.value = expense.imageBase64;
       DOM.formImagePreview.src = expense.imageBase64;
       DOM.uploadPreview.classList.remove('hidden');
+      DOM.dropZone.classList.add('hidden');
       DOM.uploadPrompt.classList.add('hidden');
     }
   } else {
@@ -442,9 +456,15 @@ function openExpenseForm(expense = null) {
 }
 
 function closeExpenseForm() {
+  if (cropperInstance) {
+    cropperInstance.destroy();
+    cropperInstance = null;
+  }
   DOM.formSheet.classList.remove('sheet-active');
   DOM.formBackdrop.classList.remove('backdrop-active');
   DOM.formBackdrop.classList.add('pointer-events-none');
+  DOM.ocrLoader.classList.add('hidden');
+  DOM.dropZone.classList.remove('hidden');
   document.body.style.overflow = '';
 }
 
@@ -490,12 +510,6 @@ async function handleSaveExpense() {
    ========================================================================== */
 
 function initUploadEvents() {
-  DOM.dropZone.addEventListener('click', (e) => {
-    if (e.target.closest('#removeImgBtn')) return;
-    if (e.target.closest('button')) return;
-    DOM.fileFileInput.click();
-  });
-
   DOM.fileFileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) processSelectedFile(e.target.files[0]);
   });
@@ -521,60 +535,153 @@ function initUploadEvents() {
 
   DOM.removeImgBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
     DOM.expenseImageBase64.value = '';
     DOM.formImagePreview.src = '';
     DOM.uploadPreview.classList.add('hidden');
+    DOM.dropZone.classList.remove('hidden');
     DOM.uploadPrompt.classList.remove('hidden');
+  });
+
+  DOM.cropAndAnalyzeBtn.addEventListener('click', async () => {
+    if (!cropperInstance) return;
+    
+    // Ottiene l'immagine ritagliata in formato Base64 ad alta qualità
+    const canvas = cropperInstance.getCroppedCanvas({ maxWidth: 1024, maxHeight: 1024 });
+    const croppedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+    
+    // Aggiorna lo stato e l'anteprima visiva con l'immagine ritagliata
+    DOM.expenseImageBase64.value = croppedBase64;
+    cropperInstance.destroy();
+    cropperInstance = null;
+    
+    // Sostituisce l'immagine nell'anteprima con quella finale ritagliata e nasconde i tasti di crop
+    DOM.formImagePreview.src = croppedBase64;
+    DOM.cropAndAnalyzeBtn.classList.add('hidden');
+    
+    // Converte il canvas ritagliato in Blob per passarlo al sistema di analisi esistente
+    canvas.toBlob((blob) => {
+      if (blob) {
+        // Avvia l'analisi (Gemini/Tesseract) solo sulla porzione ritagliata
+        processSelectedFile(blob, true); 
+      }
+    }, 'image/jpeg', 0.85);
   });
 }
 
-async function processSelectedFile(file) {
+async function processSelectedFile(file, isAlreadyCropped = false) {
+  if (!isAlreadyCropped) {
+    try {
+      let imageSrc = '';
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        imageSrc = await convertPdfToImage(file);
+      } else {
+        imageSrc = await readAsDataURL(file);
+      }
+
+      DOM.expenseImageBase64.value = imageSrc;
+      DOM.formImagePreview.src = imageSrc;
+      DOM.uploadPrompt.classList.add('hidden');
+      DOM.uploadPreview.classList.remove('hidden');
+      DOM.dropZone.classList.add('hidden');
+      DOM.cropAndAnalyzeBtn.classList.remove('hidden');
+
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+      
+      // Delay initialization slightly to ensure the image container is fully displayed and dimensioned
+      setTimeout(() => {
+        cropperInstance = new Cropper(DOM.formImagePreview, { 
+          viewMode: 1, 
+          autoCropArea: 0.8, 
+          responsive: true 
+        });
+      }, 100);
+
+    } catch (err) {
+      console.error("Errore caricamento file per crop:", err);
+    }
+    return;
+  }
+
+  // Se isAlreadyCropped è true, passa direttamente alla routine di scansione
   DOM.ocrLoader.classList.remove('hidden');
-  DOM.ocrStatusMsg.textContent = "Acquisizione del documento in corso...";
+  DOM.ocrStatusMsg.textContent = "Acquisizione del documento...";
   DOM.ocrProgressBar.style.width = '10%';
 
   try {
-    let imageSrc = '';
+    const imageSrc = DOM.expenseImageBase64.value; // l'immagine ritagliata Base64
+    DOM.ocrProgressBar.style.width = '30%';
 
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      DOM.ocrStatusMsg.textContent = "Convertendo la prima pagina del PDF con PDF.js...";
-      DOM.ocrProgressBar.style.width = '30%';
-      imageSrc = await convertPdfToImage(file);
-    } else {
-      DOM.ocrStatusMsg.textContent = "Conversione immagine...";
-      DOM.ocrProgressBar.style.width = '20%';
-      imageSrc = await readAsDataURL(file);
+    // PRIMO TENTATIVO: INTELLIGENZA ARTIFICIALE (GEMINI)
+    if (navigator.onLine && GEMINI_API_KEY !== "") {
+      try {
+        DOM.ocrStatusMsg.textContent = "L'AI di Gemini sta analizzando lo scontrino...";
+        DOM.ocrProgressBar.style.width = '50%';
+
+        const base64Data = imageSrc.split(',')[1];
+        const mimeType = imageSrc.split(',')[0].split(':')[1].split(';')[0];
+        
+        const { GoogleGenAI } = await import('@google/genai');
+        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            { inlineData: { mimeType: mimeType, data: base64Data } },
+            "Analizza questa immagine di un biglietto o scontrino di parcheggio ed estrai i dati in questo formato JSON puro, senza blocchi markdown: { 'amount': numero (es 2.50), 'date': 'AAAA-MM-DD', 'startTime': 'HH:MM', 'endTime': 'HH:MM', 'note': 'Breve descrizione del gestore o luogo' }"
+          ],
+        });
+
+        const cleanJson = response.text.trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanJson);
+
+        if (data.amount) DOM.amountInput.value = data.amount;
+        if (data.date) DOM.dateInput.value = data.date;
+        if (data.startTime) DOM.startTimeInput.value = data.startTime;
+        if (data.endTime) DOM.endTimeInput.value = data.endTime;
+        if (data.note) DOM.noteInput.value = data.note;
+
+        // Modifica per feedback Gemini permanente fino al salvataggio/annullamento
+        DOM.ocrStatusMsg.innerHTML = `<span class="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1 justify-center w-fit mx-auto"><span class="material-symbols-rounded text-sm">auto_awesome</span> Elaborato con AI Gemini</span>`;
+        DOM.ocrProgressBar.style.width = '100%';
+        // NOTA: Non nascondere il loader (rimuovi il DOM.ocrLoader.classList.add('hidden')) per lasciare il badge visibile nel form.
+        return; // Uscita pulita se Gemini funziona
+
+      } catch (geminiError) {
+        console.warn("Gemini fallito o timeout, eseguo fallback su Tesseract locale:", geminiError);
+      }
     }
 
-    DOM.expenseImageBase64.value = imageSrc;
-    DOM.formImagePreview.src = imageSrc;
-    DOM.uploadPrompt.classList.add('hidden');
-    DOM.uploadPreview.classList.remove('hidden');
+    // SECONDO TENTATIVO (FALLBACK): TESSERACT LOCALE OFFLINE
+    DOM.ocrStatusMsg.textContent = "Sei offline. Avvio scansione locale (Tesseract)...";
+    DOM.ocrProgressBar.style.width = '60%';
 
-    DOM.ocrStatusMsg.textContent = "Tesseract.js sta scansionando lo scontrino...";
-    DOM.ocrProgressBar.style.width = '45%';
+    if (typeof Tesseract === 'undefined') throw new Error("Tesseract non disponibile.");
 
-    const textResult = await scanImageOCR(imageSrc);
-    DOM.ocrProgressBar.style.width = '95%';
+    const result = await Tesseract.recognize(imageSrc, 'ita+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const percent = Math.round(m.progress * 30) + 60;
+          DOM.ocrProgressBar.style.width = `${percent}%`;
+        }
+      }
+    });
 
-    parseAndPrepopulateForm(textResult);
-
-    DOM.ocrStatusMsg.textContent = "Scansione ultimata ed importi auto-compilati!";
-    DOM.ocrProgressBar.style.width = '100%';
+    // Parsing classico con le vecchie RegEx
+    parseAndPrepopulateForm(result.data.text);
     
-    setTimeout(() => {
-      DOM.ocrLoader.classList.add('hidden');
-    }, 1500);
+    // Modifica per feedback Tesseract permanente fino al salvataggio/annullamento
+    DOM.ocrStatusMsg.innerHTML = `<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-1 rounded-full border border-amber-200 flex items-center gap-1 justify-center w-fit mx-auto"><span class="material-symbols-rounded text-sm">wifi_off</span> Elaborato in Locale (Offline)</span>`;
+    DOM.ocrProgressBar.style.width = '100%';
 
   } catch (err) {
-    console.error("Errore nel processo OCR/PDF:", err);
-    DOM.ocrStatusMsg.textContent = "Scansione fallita, inserisci i dati a mano.";
+    console.error("Errore totale di scansione:", err);
+    DOM.ocrStatusMsg.textContent = "Scansione fallita. Inserisci i dati manualmente.";
     DOM.ocrProgressBar.style.width = '100%';
-    DOM.ocrLoader.classList.remove('hidden');
-    
-    setTimeout(() => {
-      DOM.ocrLoader.classList.add('hidden');
-    }, 2500);
+    setTimeout(() => DOM.ocrLoader.classList.add('hidden'), 2500);
   }
 }
 

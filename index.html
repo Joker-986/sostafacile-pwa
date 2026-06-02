@@ -38,8 +38,17 @@
 
     <!-- CDNs per librerie esterne (Tesseract, PDF.js, jsPDF) -->
     <script src="https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.run/@google/genai"
+        }
+      }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
     <!-- Asset Locali -->
     <link rel="stylesheet" href="/style.css" />
@@ -253,41 +262,49 @@
             <div id="uploadContainer" class="space-y-3">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Scansiona Scontrino (OCR)</span>
               
-              <div id="dropZone" class="border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/10 rounded-3xl p-6 transition-all text-center flex flex-col items-center justify-center relative group">
-                <input type="file" id="fileFileInput" accept=".jpg,.jpeg,.png,.pdf" class="hidden" />
-                <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
-                
-                <div id="uploadPrompt" class="space-y-4 w-full">
-                  <div class="flex gap-3 justify-center">
-                    <button type="button" onclick="document.getElementById('cameraInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
-                      <span class="material-symbols-rounded text-3xl text-blue-600">photo_camera</span>
-                      <span class="text-xs font-bold text-slate-700">Scatta Foto</span>
-                    </button>
-                    <button type="button" onclick="document.getElementById('fileFileInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
-                      <span class="material-symbols-rounded text-3xl text-blue-600">folder_open</span>
-                      <span class="text-xs font-bold text-slate-700">Sfoglia File</span>
-                    </button>
+              <div class="relative w-full">
+                <div id="dropZone" class="border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/50 hover:bg-blue-50/10 rounded-3xl p-6 transition-all text-center flex flex-col items-center justify-center cursor-pointer group min-h-[140px]">
+                  <input type="file" id="fileFileInput" accept=".jpg,.jpeg,.png,.pdf" class="hidden" />
+                  <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+                  
+                  <div id="uploadPrompt" class="space-y-4 w-full">
+                    <div class="flex gap-3 justify-center">
+                      <button type="button" onclick="document.getElementById('cameraInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
+                        <span class="material-symbols-rounded text-3xl text-blue-600">photo_camera</span>
+                        <span class="text-xs font-bold text-slate-700">Scatta Foto</span>
+                      </button>
+                      <button type="button" onclick="document.getElementById('fileFileInput').click()" class="flex flex-col items-center gap-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-400 hover:bg-blue-50 cursor-pointer flex-1">
+                        <span class="material-symbols-rounded text-3xl text-blue-600">folder_open</span>
+                        <span class="text-xs font-bold text-slate-700">Sfoglia File</span>
+                      </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400">Accetta JPG, PNG, PDF per OCR automatico</p>
                   </div>
-                  <p class="text-[10px] text-slate-400">Accetta JPG, PNG, PDF per OCR automatico</p>
                 </div>
 
-                <!-- Preview dell'immagine caricata -->
-                <div id="uploadPreview" class="hidden absolute inset-2 bg-white rounded-2xl overflow-hidden border border-slate-200 z-10">
-                  <img id="formImagePreview" class="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Anteprima scontrino" />
-                  <button type="button" id="removeImgBtn" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-slate-900/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-slate-900 transition-all cursor-pointer">
-                    <span class="material-symbols-rounded text-lg">close</span>
-                  </button>
+                <div id="uploadPreview" class="hidden w-full bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 z-20 flex flex-col h-[340px]">
+                  <div class="flex-grow relative w-full h-[280px] overflow-hidden flex items-center justify-center">
+                    <img id="formImagePreview" class="block max-w-full max-h-full" referrerPolicy="no-referrer" alt="Anteprima scontrino" />
+                  </div>
+                  <div class="p-3 bg-slate-900 flex gap-2 border-t border-slate-800 sticky bottom-0">
+                    <button type="button" id="removeImgBtn" class="flex-1 bg-slate-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer">
+                      Annulla
+                    </button>
+                    <button type="button" id="cropAndAnalyzeBtn" class="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-500/20 flex items-center justify-center gap-1">
+                      <span class="material-symbols-rounded text-sm">crop</span>
+                      Taglia e Analizza
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Loader OCR -->
               <div id="ocrLoader" class="hidden bg-blue-50/50 border border-blue-100 rounded-2xl p-4 text-center space-y-2">
                 <div class="flex items-center justify-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0.1s"></span>
                   <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-bounce" style="animation-delay: 0.2s"></span>
                   <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce" style="animation-delay: 0.3s"></span>
                 </div>
-                <p id="ocrStatusMsg" class="text-xs font-semibold text-blue-800">Tesseract.js sta analizzando lo scontrino...</p>
+                <p id="ocrStatusMsg" class="text-xs font-semibold text-blue-800">Analisi in corso...</p>
                 <div class="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
                   <div id="ocrProgressBar" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
                 </div>
